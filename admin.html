@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Панель управления</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+<style>
+  :root{
+    --bg: #14171c;
+    --panel: #1b1f26;
+    --panel-2: #20242c;
+    --border: #2b303a;
+    --text: #e8eaed;
+    --text-dim: #9aa1ac;
+    --accent: #4f8cff;
+    --accent-hover: #3d7aef;
+    --danger: #e2574c;
+    --danger-hover: #c94a40;
+    --ok: #3bb273;
+    --radius: 10px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size:15px;
+    line-height:1.5;
+  }
+  a{ color:var(--accent); }
+
+  /* --- Login screen --- */
+  #login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .login-box{
+    width:100%;
+    max-width:340px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:32px 28px;
+  }
+  .login-box h1{
+    font-size:19px;
+    margin:0 0 4px;
+  }
+  .login-box p.sub{
+    color:var(--text-dim);
+    margin:0 0 24px;
+    font-size:13px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+  input, textarea, select{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:14px;
+    margin-bottom:16px;
+    font-family:inherit;
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:none;
+    border-color:var(--accent);
+  }
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:14px;
+    font-weight:600;
+    font-family:inherit;
+  }
+  .btn-primary{ background:var(--accent); color:white; width:100%; }
+  .btn-primary:hover{ background:var(--accent-hover); }
+  .btn-danger{ background:transparent; color:var(--danger); border:1px solid var(--danger); }
+  .btn-danger:hover{ background:var(--danger); color:white; }
+  .btn-secondary{ background:var(--panel-2); color:var(--text); border:1px solid var(--border); }
+  .btn-secondary:hover{ border-color:var(--accent); }
+  .error-msg{ color:var(--danger); font-size:13px; margin:-8px 0 16px; min-height:0; }
+
+  /* --- App shell --- */
+  #app-screen{ display:none; min-height:100vh; }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 24px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel);
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  header h1{ font-size:16px; margin:0; }
+  header .user-email{ color:var(--text-dim); font-size:13px; margin-right:14px; }
+  .header-right{ display:flex; align-items:center; }
+
+  nav{
+    display:flex;
+    gap:6px;
+    padding:14px 24px 0;
+    border-bottom:1px solid var(--border);
+    background:var(--panel);
+    overflow-x:auto;
+  }
+  nav button{
+    background:transparent;
+    color:var(--text-dim);
+    border-radius:8px 8px 0 0;
+    padding:10px 16px;
+    border-bottom:2px solid transparent;
+    white-space:nowrap;
+  }
+  nav button.active{
+    color:var(--text);
+    border-bottom:2px solid var(--accent);
+  }
+
+  main{ padding:24px; max-width:900px; margin:0 auto; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .toolbar h2{ font-size:18px; margin:0; }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:12px;
+  }
+  .item-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .item-main{ flex:1; min-width:0; }
+  .item-title{ font-weight:600; margin-bottom:2px; }
+  .item-title .badge{
+    display:inline-block;
+    font-size:11px;
+    color:var(--text-dim);
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:5px;
+    padding:1px 6px;
+    margin-left:8px;
+    font-weight:400;
+  }
+  .item-sub{ color:var(--text-dim); font-size:13px; }
+  .item-price{ font-weight:600; color:var(--ok); white-space:nowrap; }
+  .item-actions{ display:flex; gap:8px; flex-shrink:0; }
+  .item-actions button{ padding:6px 10px; font-size:13px; }
+  .unavailable{ opacity:0.5; }
+
+  .empty-state{
+    color:var(--text-dim);
+    text-align:center;
+    padding:40px 20px;
+    font-size:14px;
+  }
+
+  /* modal */
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.6);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:100;
+  }
+  .modal-overlay.active{ display:flex; }
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:24px;
+    width:100%;
+    max-width:420px;
+    max-height:90vh;
+    overflow-y:auto;
+  }
+  .modal h3{ margin:0 0 18px; font-size:16px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:4px; }
+  .modal-actions button{ flex:1; }
+  .row-2{ display:flex; gap:12px; }
+  .row-2 > div{ flex:1; }
+  .checkbox-row{
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:16px;
+  }
+  .checkbox-row input{ width:auto; margin:0; }
+  .checkbox-row label{ margin:0; color:var(--text); }
+
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:13px;
+    z-index:200;
+    opacity:0;
+    transition:opacity 0.25s;
+    pointer-events:none;
+  }
+  .toast.show{ opacity:1; }
+  .toast.error{ border-color:var(--danger); color:var(--danger); }
+
+  .add-btn{ background:var(--accent); color:white; }
+  .add-btn:hover{ background:var(--accent-hover); }
+
+  @media (max-width:520px){
+    main{ padding:16px; }
+    header{ padding:14px 16px; }
+    nav{ padding:12px 16px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Вход в панель</h1>
+    <p class="sub">Управление меню, адресом и контактами</p>
+    <form id="login-form">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" required autocomplete="username">
+      <label for="login-password">Пароль</label>
+      <input type="password" id="login-password" required autocomplete="current-password">
+      <p class="error-msg" id="login-error"></p>
+      <button type="submit" class="btn-primary" id="login-btn">Войти</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <header>
+    <h1>Панель управления</h1>
+    <div class="header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="btn-secondary" id="logout-btn">Выйти</button>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="drinks">Меню</button>
+    <button class="tab-btn" data-tab="adres">Адрес</button>
+    <button class="tab-btn" data-tab="kontakts">Контакты</button>
+  </nav>
+
+  <main>
+
+    <!-- DRINKS TAB -->
+    <div class="tab-panel active" id="tab-drinks">
+      <div class="toolbar">
+        <h2>Позиции меню</h2>
+        <button class="add-btn" id="add-drink-btn">+ Добавить</button>
+      </div>
+      <div id="drinks-list"></div>
+    </div>
+
+    <!-- ADRES TAB -->
+    <div class="tab-panel" id="tab-adres">
+      <div class="toolbar"><h2>Адрес</h2></div>
+      <div class="card">
+        <form id="adres-form">
+          <label for="adres-address">Адрес</label>
+          <input type="text" id="adres-address" placeholder="г. Киев, ул. Примерная, 1">
+          <label for="adres-hours">Часы работы</label>
+          <input type="text" id="adres-hours" placeholder="Пн–Вс 09:00–22:00">
+          <button type="submit" class="btn-primary">Сохранить</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- KONTAKTS TAB -->
+    <div class="tab-panel" id="tab-kontakts">
+      <div class="toolbar"><h2>Контакты</h2></div>
+      <div class="card">
+        <form id="kontakts-form">
+          <label for="k-phone">Телефон</label>
+          <input type="text" id="k-phone" placeholder="+380...">
+          <label for="k-email">Email</label>
+          <input type="email" id="k-email" placeholder="info@example.com">
+          <label for="k-instagram">Instagram</label>
+          <input type="text" id="k-instagram" placeholder="https://instagram.com/...">
+          <label for="k-tiktok">TikTok</label>
+          <input type="text" id="k-tiktok" placeholder="https://tiktok.com/@...">
+          <button type="submit" class="btn-primary">Сохранить</button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD / EDIT DRINK MODAL -->
+<div class="modal-overlay" id="drink-modal-overlay">
+  <div class="modal">
+    <h3 id="drink-modal-title">Новая позиция</h3>
+    <form id="drink-form">
+      <input type="hidden" id="drink-id">
+      <label for="drink-category">Категория</label>
+      <input type="text" id="drink-category" placeholder="Кофе, Чай, Десерты..." required>
+      <label for="drink-name">Название</label>
+      <input type="text" id="drink-name" required>
+      <label for="drink-description">Описание</label>
+      <textarea id="drink-description" rows="2"></textarea>
+      <div class="row-2">
+        <div>
+          <label for="drink-price">Цена</label>
+          <input type="number" id="drink-price" step="0.01" required>
+        </div>
+        <div>
+          <label for="drink-sort">Порядок</label>
+          <input type="number" id="drink-sort" value="0">
+        </div>
+      </div>
+      <label for="drink-image">Ссылка на картинку</label>
+      <input type="text" id="drink-image" placeholder="https://...">
+      <div class="checkbox-row">
+        <input type="checkbox" id="drink-available" checked>
+        <label for="drink-available">Доступно на сайте</label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="drink-cancel-btn">Отмена</button>
+        <button type="submit" class="btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ==== SUPABASE CONFIG ====
+  const SUPABASE_URL = 'https://ijumdwnwfbikqrdlfacc.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_RiFZUqklO0m4wWWsx7QOOw_epeJqESE';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const loginScreen = document.getElementById('login-screen');
+  const appScreen = document.getElementById('app-screen');
+  const toastEl = document.getElementById('toast');
+
+  function showToast(msg, isError){
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('error', !!isError);
+    toastEl.classList.add('show');
+    setTimeout(()=> toastEl.classList.remove('show'), 2500);
+  }
+
+  // ---- AUTH ----
+  document.getElementById('login-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    errorEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Вход...';
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    btn.disabled = false;
+    btn.textContent = 'Войти';
+    if(error){
+      errorEl.textContent = 'Неверный email или пароль';
+      return;
+    }
+    enterApp(data.user);
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async ()=>{
+    await sb.auth.signOut();
+    location.reload();
+  });
+
+  async function checkSession(){
+    const { data } = await sb.auth.getSession();
+    if(data.session){
+      enterApp(data.session.user);
+    }
+  }
+
+  function enterApp(user){
+    loginScreen.style.display = 'none';
+    appScreen.style.display = 'block';
+    document.getElementById('user-email').textContent = user.email;
+    loadDrinks();
+    loadAdres();
+    loadKontakts();
+  }
+
+  // ---- TABS ----
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ================= DRINKS =================
+  const drinksList = document.getElementById('drinks-list');
+  const drinkModal = document.getElementById('drink-modal-overlay');
+  const drinkForm = document.getElementById('drink-form');
+
+  document.getElementById('add-drink-btn').addEventListener('click', ()=> openDrinkModal(null));
+  document.getElementById('drink-cancel-btn').addEventListener('click', closeDrinkModal);
+  drinkModal.addEventListener('click', (e)=>{ if(e.target === drinkModal) closeDrinkModal(); });
+
+  function openDrinkModal(item){
+    document.getElementById('drink-modal-title').textContent = item ? 'Редактировать позицию' : 'Новая позиция';
+    document.getElementById('drink-id').value = item ? item.id : '';
+    document.getElementById('drink-category').value = item ? (item.category || '') : '';
+    document.getElementById('drink-name').value = item ? (item.name || '') : '';
+    document.getElementById('drink-description').value = item ? (item.description || '') : '';
+    document.getElementById('drink-price').value = item ? (item.price ?? '') : '';
+    document.getElementById('drink-sort').value = item ? (item.sort_order ?? 0) : 0;
+    document.getElementById('drink-image').value = item ? (item.image_url || '') : '';
+    document.getElementById('drink-available').checked = item ? !!item.is_available : true;
+    drinkModal.classList.add('active');
+  }
+  function closeDrinkModal(){ drinkModal.classList.remove('active'); }
+
+  async function loadDrinks(){
+    drinksList.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    const { data, error } = await sb.from('drinks').select('*').order('category').order('sort_order');
+    if(error){ showToast('Ошибка загрузки меню', true); drinksList.innerHTML = ''; return; }
+    if(!data || data.length === 0){
+      drinksList.innerHTML = '<p class="empty-state">Пока нет ни одной позиции. Нажми «+ Добавить».</p>';
+      return;
+    }
+    drinksList.innerHTML = '';
+    data.forEach(item=>{
+      const card = document.createElement('div');
+      card.className = 'card item-row' + (item.is_available ? '' : ' unavailable');
+      card.innerHTML = `
+        <div class="item-main">
+          <div class="item-title">${escapeHtml(item.name || '')}<span class="badge">${escapeHtml(item.category || '')}</span></div>
+          <div class="item-sub">${escapeHtml(item.description || '')}</div>
+        </div>
+        <div class="item-price">${item.price != null ? item.price + ' грн' : ''}</div>
+        <div class="item-actions">
+          <button class="btn-secondary edit-btn">Изменить</button>
+          <button class="btn-danger delete-btn">Удалить</button>
+        </div>
+      `;
+      card.querySelector('.edit-btn').addEventListener('click', ()=> openDrinkModal(item));
+      card.querySelector('.delete-btn').addEventListener('click', ()=> deleteDrink(item.id));
+      drinksList.appendChild(card);
+    });
+  }
+
+  drinkForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id = document.getElementById('drink-id').value;
+    const payload = {
+      category: document.getElementById('drink-category').value.trim(),
+      name: document.getElementById('drink-name').value.trim(),
+      description: document.getElementById('drink-description').value.trim(),
+      price: parseFloat(document.getElementById('drink-price').value) || 0,
+      sort_order: parseInt(document.getElementById('drink-sort').value) || 0,
+      image_url: document.getElementById('drink-image').value.trim(),
+      is_available: document.getElementById('drink-available').checked,
+    };
+    let error;
+    if(id){
+      ({ error } = await sb.from('drinks').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('drinks').insert(payload));
+    }
+    if(error){ showToast('Ошибка сохранения: ' + error.message, true); return; }
+    showToast('Сохранено');
+    closeDrinkModal();
+    loadDrinks();
+  });
+
+  async function deleteDrink(id){
+    if(!confirm('Удалить эту позицию?')) return;
+    const { error } = await sb.from('drinks').delete().eq('id', id);
+    if(error){ showToast('Ошибка удаления', true); return; }
+    showToast('Удалено');
+    loadDrinks();
+  }
+
+  // ================= ADRES =================
+  let adresRowId = null;
+  async function loadAdres(){
+    const { data, error } = await sb.from('adres').select('*').limit(1).maybeSingle();
+    if(error){ showToast('Ошибка загрузки адреса', true); return; }
+    if(data){
+      adresRowId = data.id;
+      document.getElementById('adres-address').value = data.address || '';
+      document.getElementById('adres-hours').value = data.working_hours || '';
+    }
+  }
+  document.getElementById('adres-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const payload = {
+      address: document.getElementById('adres-address').value.trim(),
+      working_hours: document.getElementById('adres-hours').value.trim(),
+    };
+    let error;
+    if(adresRowId){
+      ({ error } = await sb.from('adres').update(payload).eq('id', adresRowId));
+    } else {
+      ({ error } = await sb.from('adres').insert(payload));
+    }
+    if(error){ showToast('Ошибка сохранения', true); return; }
+    showToast('Адрес сохранён');
+    loadAdres();
+  });
+
+  // ================= KONTAKTS =================
+  let kontaktsRowId = null;
+  async function loadKontakts(){
+    const { data, error } = await sb.from('kontakts').select('*').limit(1).maybeSingle();
+    if(error){ showToast('Ошибка загрузки контактов', true); return; }
+    if(data){
+      kontaktsRowId = data.id;
+      document.getElementById('k-phone').value = data.phone || '';
+      document.getElementById('k-email').value = data.email || '';
+      document.getElementById('k-instagram').value = data.instagram || '';
+      document.getElementById('k-tiktok').value = data.tiktok || '';
+    }
+  }
+  document.getElementById('kontakts-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const payload = {
+      phone: document.getElementById('k-phone').value.trim(),
+      email: document.getElementById('k-email').value.trim(),
+      instagram: document.getElementById('k-instagram').value.trim(),
+      tiktok: document.getElementById('k-tiktok').value.trim(),
+    };
+    let error;
+    if(kontaktsRowId){
+      ({ error } = await sb.from('kontakts').update(payload).eq('id', kontaktsRowId));
+    } else {
+      ({ error } = await sb.from('kontakts').insert(payload));
+    }
+    if(error){ showToast('Ошибка сохранения', true); return; }
+    showToast('Контакты сохранены');
+    loadKontakts();
+  });
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  checkSession();
+</script>
+</body>
+</html>
