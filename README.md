@@ -22,3 +22,20 @@
 
 ## 📂 Структура файлів
 
+
+## 🛠️ Технології
+
+- **HTML5** — Семантична розмітка
+- **CSS3** — Flexbox, Grid, Custom Properties, Animations
+- **JavaScript (Vanilla)** — Без фреймворків
+- **Supabase** — Backend для управління меню, адресою, контактами
+- **Leaflet.js** — Карта з локаціями
+- **Formsubmit.co** — Обробка форм звернень
+
+## 🔧 Встановлення
+
+### Локально
+1. Склонуйте репозиторій:
+```bash
+git clone https://github.com/hash274/Speshelty.git
+cd Speshelty
